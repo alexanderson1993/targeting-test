@@ -1,0 +1,207 @@
+on opencard
+   wander
+end opencard
+
+on wander
+   global wanderList
+   put 20 into vSpeedLimit
+   put 2.5 into SC1 --This stands for "Speed Constant"
+   put 1.5 into sC2
+   repeat for each line x in wanderlist
+      if x is empty then next repeat
+      put item 1 of x into z
+      put item 2 of x into Quad
+      put z into vObj
+      if the short name of this card is not "Weapons Control" then exit wander
+      if the visible of img vObj is not true then next repeat
+      --if the moving of img vObj is "Yes" then
+      put the xLoc of img vObj into vX
+      put the yLoc of img vObj into vY
+      put (the width of img ("Weapons Grid") of card "Weapons Control" - 45) into vXLimit
+      put vXLimit into vYLimit
+      put the xSpeed of img vObj into vSX
+      put the ySpeed of img vObj into vSY
+      --------Figure the X Coordinate---------------------
+      if vSX / vSpeedLImit > .99 then put vSpeedLImit - 1 into vSX
+      if vSX / vSpeedLImit < -.99 then put -(vSpeedLImit - 1) into vSX
+      if vX >= vXLimit then
+         put vXLImit - 1 into vX
+         if vSX > 0 then put 0 into vSX
+      end if
+      if vX < 0 then 
+         put 1 into vX
+         if vSX < 0 then put 0 into vSX
+      end if
+      if random(vXLimit) < vX then
+         add ( (vSpeedLimit - abs(vSX) ) / vSpeedLimit)  * -1 * SC1 to vSX
+         add (( vXLimit - abs(vX)) / vXLimit) * -1 * SC2 to vSX
+      else
+         add ( (vSpeedLimit - abs(vSX) ) / vSpeedLimit) * SC1 to vSX
+         add (( vXLimit - abs(vX)) / vXLimit) * SC2 to vSX
+      end if
+      add vSX to vX
+      if vX > vXLimit then put vXLimit into vX
+      if vX < 0 then put 0 into vX
+      set the xSpeed of img vObj to vSX
+      set the xLoc of img vObj to vX
+      subtract (the width of img ("Weapons Grid") of card "Weapons Control" / 2) from vX
+      --------------Figure the Y Coordinate------------------
+      if vSY / vSpeedLImit > .99 then put vSpeedLImit - 1 into vSY
+      if vSY / vSpeedLImit < -.99 then put -(vSpeedLImit - 1) into vSY
+      if vY >= vYLimit then
+         put vYLImit - 1 into vY
+         if vSY > 0 then put 0 into vSY
+      end if
+      if vY < 0 then 
+         put 1 into vY
+         if vSX < 0 then put 0 into vSY
+      end if
+      if random(vXLimit) < vY then
+         add ( (vSpeedLimit - abs(vSY) ) / vSpeedLimit)  * -1 * SC2 to vSY
+         add (( vYLimit - abs(vX)) / vYLimit) * -1 * SC1 to vSY
+      else
+         add ( (vSpeedLimit - abs(vSY) ) / vSpeedLimit) * SC2 to vSY
+         add (( vXLimit - abs(vY)) / vXLimit) * SC1 to vSY
+      end if 
+      add vSY to vY
+      if vY >= vYLimit then put vYLimit into vY
+      if vY <= 0 then put 0 into vY
+      set the ySpeed of img vObj to vSY
+      set the yLoc of img vObj to vY
+      subtract (the height of img ("Weapons Grid") of card "Weapons Control" / 2) from vY
+      -------------------
+      put the loc of img ("Weapons Grid") of card "Weapons Control" into newLoc
+      put round( vX + the item 1 of newLoc) +32 into the item 1 of newLoc
+      put round( vY + the item 2 of newLoc) +32 into the item 2 of newLoc
+      --end if
+      if the targetedContact of this stack is empty then
+         --if the turretDeployed of this stack is false then
+         if the mouseLoc is within the rect of img vObj then
+            set the targetTime of img vObj to the targetTime of img vObj + 2
+         else
+            set the targetTime of img vObj to abs(the targetTime of img vObj - 1)
+         end if
+         if the targetTime of img vObj > 30 then
+            --set the targetedQuad of this stack to quad
+            set the targetedContact of this stack to vObj
+         end if
+      else
+         set the targetTime of img vObj to 0
+      end if
+      --end if
+      if the moving of img vObj is "No" then put the loc of img vObj into newLoc
+      if the targetedContact of this stack is vObj then
+         show img "Target.png" of card "Weapons Control"
+         show grc "yLine" of card "Weapons Control"
+         show grc "xLine" of card "Weapons Control"
+         move img "Target.png" of card "Weapons Control" to newLoc in 200 milliseconds without waiting
+         move grc "yLine" of card "Weapons Control" to (the item 1 of the loc of img ("Weapons Grid") of card "Weapons Control"),(the item 2 of newLoc) in 200 milliseconds without waiting
+         move grc "xLine" of card "Weapons Control" to (the item 1 of newLoc),(the item 2 of the loc of img ("Weapons Grid") of card "Weapons Control") in 200 milliseconds without waiting
+      end if
+      move img vObj to newLoc in 200 milliseconds without waiting
+   end repeat
+   if the TargetedContact of this stack is empty then
+      hide img "Target.png" of card "Weapons Control"
+      hide grc "yLine" of card "Weapons Control"
+      hide grc "xLine" of card "Weapons Control"
+   end if
+   newtask wander,,200
+end wander
+
+on beamWidth vAngle
+ send "beamWidth" && vAngle to group "Weapons Options" of card "Weapons Control"
+end beamWidth
+
+on chargePhaser vPerc,vFiring,PhaserNum
+  lock screen
+  if vPerc > 100 then put 100 into vPerc
+  if vPerc < 0 then put 0 into vPerc
+  put "CHARGE: " & round(vPerc) & "%" into fld ("ChargePercent" & PhaserNum) of cd "Weapons Control"
+  set the disabled of btn ("Fire Phasers" & phaserNum) of cd "Weapons Control" to vPerc is 0
+  if vPerc < 2 then put false into vFiring
+  put phaserNum into vWhich
+    set the visible of grc ("Charge" & vWhich) of cd "Weapons Control" to not (vPerc is 0)
+    set the charged of grc ("Charge" & vWhich) of cd "Weapons Control" to vPerc
+    divide vPerc by 100
+    put the width of grc ("Bank" & vWhich) of cd "Weapons Control" - 4 into vAll
+    multiply vAll by vPerc
+    set the width of grc ("Charge" & vWhich) of cd "Weapons Control" to vAll
+    set the left of grc ("Charge" & vWhich) of cd "Weapons Control" to (the left of grc ("Bank" & vWhich) of cd "Weapons Control" + 2)
+    set the loc of grc ("Charge" & vWhich) of cd "Weapons Control" to (the item 1 of the loc of grc ("Charge" & vWhich) of cd "Weapons Control"),(the item 2 of the loc of grc ("Bank" & vWhich) of cd "Weapons Control")
+    multiply vPerc by 100
+  if round(vPerc) mod 25 is 0 then netSend "PhaserLevel " & round(vPerc) & comma & PhaserNum,"Core"
+  unlock screen
+end chargePhaser 
+
+on firePhaser vWhich
+  global fireSpeed --,fireDirection
+  if the heat of grc ("Heat" & vWhich) of cd "Weapons Control" > 99 then 
+    showError "PHASER HEAT IS TOO HIGH!"
+    newTask backgroundPhaserCool
+    exit firePhaser
+  end if
+  if the phaserUpgrade of this stack is "Pulsing" then
+    if fireSpeed is empty then put .3 into fireSpeed
+    add .01 to fireSpeed
+    put the charged of grc ("Charge" & vWhich) - fireSpeed into vPerc
+    lock screen
+    chargePhaser vPerc,"True",vWhich
+    phaserHeat (the heat of grc ("Heat" & vWhich) + .19),vWhich
+    unlock screen
+    if fireSpeed > .5 then 
+      put .1 into fireSpeed
+    end if
+  else
+    put the charged of grc ("Charge" & vWhich) - .2 into vPerc
+    lock screen
+    chargePhaser vPerc,"True",vWhich
+    phaserHeat ((the heat of grc ("Heat" & vWhich)) + .107),vWhich
+    unlock screen
+  end if
+  wait .05 ticks with messages
+end firePhaser
+
+on showError vError
+   put vError into fld "ErrorMessage" of cd "Weapons Control"
+   repeat 7 times
+      set the visible of fld "ErrorMessage" of cd "Weapons Control" to not the visible of fld "ErrorMessage" of cd "Weapons Control"
+      wait 7 ticks with messages
+   end repeat
+   wait 3 sec with messages
+   set the visible of fld "ErrorMessage" of cd "Weapons Control" to false
+end showError
+
+on flushCoolant vPerc,vWhich
+  lock screen
+  if vPerc > 100 then put 100 into vPerc
+  if vPerc < 0 then put 0 into vPerc
+  if the width of grc "Coolant" ≤ 1 then exit flushCoolant
+  if the width of grc ("Heat" & vWhich) ≤ 1 then exit flushcoolant
+  divide vPerc by 100
+  put the width of grc ("HeatBank" & vWhich) of cd "Weapons Control" - 6 into vAll
+  multiply vAll by vPerc
+  set the width of grc ("Heat" & vWhich) of cd "Weapons Control" to vAll
+  set the left of grc ("Heat" & vWhich) of cd "Weapons Control" to (the left of grc ("HeatBank" & vWhich) of cd "Weapons Control" + 2)
+  set the width of grc "Coolant" of cd "Weapons Control" to the width of grc "Coolant" - 1
+  set the left of grc "Coolant" of cd "Weapons Control" to (the left of grc "CoolantBank" of cd "Weapons Control" + 2)
+  put vPerc*100 into vPerc
+  set the heat of grc ("Heat" & vWhich) to vPerc
+  unlock screen
+end flushCoolant
+
+on loadTorpedo vWhich
+
+end loadTorpedo
+
+on unloadTorpedo vWhich
+    disable group "Load Torp"
+   disable group "Unload Torp"
+      disable btn "Fire Torpedo"
+      hide grc "TorpCover" with visual effect wipe down
+         move btn "Torpedo" to (item 1 of the loc of grc "TorpCover"),(item 2 of the loc of grc "TorpCover" - 104) in 3 sec
+   move btn "Torpedo" to (item 1 of the loc of grc "TorpCover" - 173),(item 2 of the loc of grc "TorpCover" - 104) in 3 sec
+   set the effectrate to 400
+    enable group "Load Torp"
+   enable group "Unload Torp"
+   --hide btn "Torpedo" with visual effect dissolve
+end unloadTorpedo
